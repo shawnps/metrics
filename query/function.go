@@ -56,11 +56,11 @@ type MetricFunction struct {
 
 func (f MetricFunction) Evaluate(arguments []Expression, groupBy []string) (value, error) {
 	/*
-	name := f.Name
-	length := len(arguments)
-	if f.MinArgument > length || (f.MaxArgument != -1 && f.MaxArgument < length) {
-		return nil, ArgumentLengthError{name, f.MinArgument, f.MaxArgument, length}
-	}
+		name := f.Name
+		length := len(arguments)
+		if f.MinArgument > length || (f.MaxArgument != -1 && f.MaxArgument < length) {
+			return nil, ArgumentLengthError{name, f.MinArgument, f.MaxArgument, length}
+		}
 	*/
 	return nil, nil
 }
