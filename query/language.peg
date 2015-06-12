@@ -37,6 +37,7 @@ type Parser Peg {
 # The following queries are support
 
 # describe all              <- describe all statement - returns all metric keys.
+# describe key=value        <- describe all WHERE statement - returns all metric keys.
 # describe metric where ... <- describes a single metric - returns all tagsets within a single metric key.
 # select ...                <- select statement - retrieves, transforms, and aggregates time serieses.
 

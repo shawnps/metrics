@@ -26,5 +26,19 @@ type Backend interface {
 	// FetchSingleSeries fetches the series described by the provided TaggedMetric
 	// corresponding to the Timerange, down/upsampling if necessary using
 	// SampleMethod
+
+	// this function should return an instance of BackendError
 	FetchSingleSeries(request FetchSeriesRequest) (Timeseries, error)
+}
+
+type BackendErrorCode int
+
+const (
+	TimeoutError BackendErrorCode = iota + 1
+	InvalidSeriesError
+)
+
+type BackendError struct {
+	Metric TaggedMetric
+	Code   BackendErrorCode
 }
