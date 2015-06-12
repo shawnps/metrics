@@ -14,20 +14,19 @@
 
 package api
 
-// Backend describes how to fetch time-series data from a given backend.
+// FetchSeriesRequest contains all the information to fetch a single series of metric
+// from a backend.
 type FetchSeriesRequest struct {
-	Metric       TaggedMetric
-	SampleMethod SampleMethod
-	Timerange    Timerange
-	Api          API
+	Metric       TaggedMetric // metric to fetch.
+	SampleMethod SampleMethod // up/downsampling behavior.
+	Timerange    Timerange    // time range to fetch data from.
+	Api          API          // an API instance.
 }
 
+// Backend describes how to fetch time-series data from a given backend.
 type Backend interface {
-	// FetchSingleSeries fetches the series described by the provided TaggedMetric
-	// corresponding to the Timerange, down/upsampling if necessary using
-	// SampleMethod
 
-	// this function should return an instance of BackendError
+	// FetchSingleSeries should return an instance of BackendError
 	FetchSingleSeries(request FetchSeriesRequest) (Timeseries, error)
 }
 

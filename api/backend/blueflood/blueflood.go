@@ -34,17 +34,17 @@ type httpClient interface {
 	Get(url string) (resp *http.Response, err error)
 }
 
-type Blueflood struct {
+type blueflood struct {
 	baseUrl  string
 	tenantId string
 	client   httpClient
 }
 
-type QueryResponse struct {
-	Values []MetricPoint `json:"values"`
+type queryResponse struct {
+	Values []metricPoint `json:"values"`
 }
 
-type MetricPoint struct {
+type metricPoint struct {
 	Points    int     `json:"numPoints"`
 	Timestamp int64   `json:"timestamp"`
 	Average   float64 `json:"average"`
@@ -53,20 +53,23 @@ type MetricPoint struct {
 	Variance  float64 `json:"variance"`
 }
 
+// resolutions supported by Blueflood
+type resolution string
+
 const (
-	ResolutionFull    = "FULL"
-	Resolution5Min    = "MIN5"
-	Resolution20Min   = "MIN20"
-	Resolution60Min   = "MIN60"
-	Resolution240Min  = "MIN240"
-	Resolution1440Min = "MIN1440"
+	resolutionFull    resolution = "FULL"
+	resolution5Min               = "MIN5"
+	resolution20Min              = "MIN20"
+	resolution60Min              = "MIN60"
+	resolution240Min             = "MIN240"
+	resolution1440Min            = "MIN1440"
 )
 
-func NewBlueflood(baseUrl string, tenantId string) *Blueflood {
-	return &Blueflood{baseUrl: baseUrl, tenantId: tenantId, client: http.DefaultClient}
+func NewBlueflood(baseUrl string, tenantId string) api.Backend {
+	return &blueflood{baseUrl: baseUrl, tenantId: tenantId, client: http.DefaultClient}
 }
 
-func (b *Blueflood) FetchSingleSeries(request api.FetchSeriesRequest) (api.Timeseries, error) {
+func (b *blueflood) FetchSingleSeries(request api.FetchSeriesRequest) (api.Timeseries, error) {
 	sampler, ok := samplerMap[request.SampleMethod]
 	if !ok {
 		return api.Timeseries{}, errors.New(fmt.Sprintf("Unsupported SampleMethod %d", request.SampleMethod))
@@ -93,7 +96,7 @@ func (b *Blueflood) FetchSingleSeries(request api.FetchSeriesRequest) (api.Times
 	// Pull a bit outside of the requested range from blueflood so we
 	// have enough data to generate all snapped values
 	params.Set("to", strconv.FormatInt(request.Timerange.End()+request.Timerange.Resolution(), 10))
-	params.Set("resolution", bluefloodResolution(request.Timerange.Resolution()))
+	params.Set("resolution", string(bluefloodResolution(request.Timerange.Resolution())))
 	params.Set("select", fmt.Sprintf("numPoints,%s", strings.ToLower(sampler.fieldName)))
 
 	queryUrl.RawQuery = params.Encode()
@@ -112,7 +115,7 @@ func (b *Blueflood) FetchSingleSeries(request api.FetchSeriesRequest) (api.Times
 
 	log.Infof("Fetch result: %s", string(body))
 
-	var result QueryResponse
+	var result queryResponse
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return api.Timeseries{}, err
@@ -142,7 +145,7 @@ func (b *Blueflood) FetchSingleSeries(request api.FetchSeriesRequest) (api.Times
 	}, nil
 }
 
-func addMetricPoint(metricPoint MetricPoint, field func(MetricPoint) float64, timerange api.Timerange, buckets [][]float64) bool {
+func addMetricPoint(metricPoint metricPoint, field func(metricPoint) float64, timerange api.Timerange, buckets [][]float64) bool {
 	value := field(metricPoint)
 	// The index to assign within the array is computed using the timestamp.
 	// It floors to the nearest index.
@@ -154,7 +157,7 @@ func addMetricPoint(metricPoint MetricPoint, field func(MetricPoint) float64, ti
 	return true
 }
 
-func bucketsFromMetricPoints(metricPoints []MetricPoint, resultField func(MetricPoint) float64, timerange api.Timerange) [][]float64 {
+func bucketsFromMetricPoints(metricPoints []metricPoint, resultField func(metricPoint) float64, timerange api.Timerange) [][]float64 {
 	buckets := make([][]float64, timerange.Slots())
 	// Make the buckets:
 	for i := range buckets {
@@ -168,16 +171,16 @@ func bucketsFromMetricPoints(metricPoints []MetricPoint, resultField func(Metric
 
 var samplerMap map[api.SampleMethod]struct {
 	fieldName     string
-	fieldSelector func(point MetricPoint) float64
+	fieldSelector func(point metricPoint) float64
 	bucketSampler func([]float64) float64
 } = map[api.SampleMethod]struct {
 	fieldName     string
-	fieldSelector func(point MetricPoint) float64
+	fieldSelector func(point metricPoint) float64
 	bucketSampler func([]float64) float64
 }{
 	api.SampleMean: {
 		fieldName:     "average",
-		fieldSelector: func(point MetricPoint) float64 { return point.Average },
+		fieldSelector: func(point metricPoint) float64 { return point.Average },
 		bucketSampler: func(bucket []float64) float64 {
 			value := 0.0
 			for _, v := range bucket {
@@ -188,7 +191,7 @@ var samplerMap map[api.SampleMethod]struct {
 	},
 	api.SampleMin: {
 		fieldName:     "min",
-		fieldSelector: func(point MetricPoint) float64 { return point.Min },
+		fieldSelector: func(point metricPoint) float64 { return point.Min },
 		bucketSampler: func(bucket []float64) float64 {
 			value := bucket[0]
 			for _, v := range bucket {
@@ -199,7 +202,7 @@ var samplerMap map[api.SampleMethod]struct {
 	},
 	api.SampleMax: {
 		fieldName:     "max",
-		fieldSelector: func(point MetricPoint) float64 { return point.Max },
+		fieldSelector: func(point metricPoint) float64 { return point.Max },
 		bucketSampler: func(bucket []float64) float64 {
 			value := bucket[0]
 			for _, v := range bucket {
@@ -212,20 +215,18 @@ var samplerMap map[api.SampleMethod]struct {
 
 // Blueflood keys the resolution param to a java enum, so we have to convert
 // between them.
-func bluefloodResolution(r int64) string {
+func bluefloodResolution(r int64) resolution {
 	switch {
 	case r < 5*60*1000:
-		return ResolutionFull
+		return resolutionFull
 	case r < 20*60*1000:
-		return Resolution5Min
+		return resolution5Min
 	case r < 60*60*1000:
-		return Resolution20Min
+		return resolution20Min
 	case r < 240*60*1000:
-		return Resolution60Min
+		return resolution60Min
 	case r < 1440*60*1000:
-		return Resolution240Min
+		return resolution240Min
 	}
-	return Resolution1440Min
+	return resolution1440Min
 }
-
-var _ api.Backend = (*Blueflood)(nil)
