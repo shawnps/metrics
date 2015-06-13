@@ -31,15 +31,55 @@ func (fs Functions) Register(f MetricFunction) bool {
 	if f.Compute == nil {
 		return false
 	}
-	if f.ProcessContext == nil {
-		f.ProcessContext = func(ctx EvaluationContext) EvaluationContext { return ctx }
-	}
 	fs.mapping[f.Name] = f
 	return true
 }
 
 func (fs Functions) RegisterBinary(name string, evaluate func(float64, float64) float64) bool {
-	return false
+	return fs.RegisterEvaluator(name, 2, 2, func(values []value, groupBy []string) (value, error) {
+	leftList, err := values[0].toSeriesList(context.Timerange)
+	if err != nil {
+		return nil, err
+	}
+	rightList, err := values[1].toSeriesList(context.Timerange)
+	if err != nil {
+		return nil, err
+	}
+
+	joined := join([]api.SeriesList{leftList, rightList})
+
+	result := make([]api.Timeseries, len(joined.Rows))
+
+	for i, row := range joined.Rows {
+		left := row.Row[0]
+		right := row.Row[1]
+		array := make([]float64, len(left.Values))
+		for j := 0; j < len(left.Values); j++ {
+			array[j] = evaluate(left.Values[j], right.Values[j])
+		}
+		result[i] = api.Timeseries{array, row.TagSet}
+	}
+
+	return seriesListValue(api.SeriesList{
+		Series:    result,
+		Timerange: context.Timerange,
+	}), nil
+	})
+}
+
+func (fs Functions) RegisterEvaluator(name string, min int, max int, evaluate func([]value, []string) (value, error)) bool {
+	return fs.Register(MetricFunction{
+		name,
+		min,
+		max,
+		func(context EvaluationContext, arguments []Expression, groupBy []string) (value, error) {
+			values, err := evaluateExpressions(context, arguments)
+			if err != nil {
+				return nil, err
+			}
+			return evaluate(values, groupBy)
+		},
+	})
 }
 
 func (fs Functions) Get(name string) MetricFunction {
@@ -50,17 +90,19 @@ type MetricFunction struct {
 	Name           string                                    // name of the function
 	MinArgument    int                                       // min number of arguments.
 	MaxArgument    int                                       // max number of arguments - -1 for no max.
-	ProcessContext func(EvaluationContext) EvaluationContext // if set, pre-processes the context.
-	Compute        func([]value, []string) (value, error)    // evaluates the given expression.
+	Compute        func(EvaluationContext, []Expression, []string) (value, error)
+	// Compute        func([]value, []string) (value, error)    // evaluates the given expression.
 }
 
-func (f MetricFunction) Evaluate(arguments []Expression, groupBy []string) (value, error) {
-	/*
-		name := f.Name
-		length := len(arguments)
-		if f.MinArgument > length || (f.MaxArgument != -1 && f.MaxArgument < length) {
-			return nil, ArgumentLengthError{name, f.MinArgument, f.MaxArgument, length}
-		}
-	*/
-	return nil, nil
+func (f MetricFunction) Evaluate(
+	context EvaluationContext,
+	arguments []Expression,
+	groupBy []string,
+) (value, error) {
+	// preprocessing
+	length := len(arguments)
+	if f.MinArgument > length || (f.MaxArgument != -1 && f.MaxArgument < length) {
+		return nil, ArgumentLengthError{f.Name, f.MinArgument, f.MaxArgument, length}
+	}
+	return f.Compute(context, arguments, groupBy)
 }
