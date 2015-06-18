@@ -81,7 +81,7 @@ func TestCommand_Describe(t *testing.T) {
 			continue
 		}
 		command := rawCommand.(*DescribeCommand)
-		rawResult, _ := command.Execute(ExecutionContext{nil, test.backend, 1000})
+		rawResult, _ := command.Execute(ExecutionContext{nil, test.backend, 1000, 0})
 		parsedResult := rawResult.([]string)
 		a.EqInt(len(parsedResult), test.length)
 	}
@@ -203,7 +203,7 @@ func TestCommand_Select(t *testing.T) {
 			continue
 		}
 		command := rawCommand.(*SelectCommand)
-		rawResult, err := command.Execute(ExecutionContext{backend.NewSequentialMultiBackend(fakeBackend), fakeApi, 1000})
+		rawResult, err := command.Execute(ExecutionContext{backend.NewSequentialMultiBackend(fakeBackend), fakeApi, 1000, 0})
 		if err != nil {
 			if !test.expectError {
 				a.Errorf("Unexpected error while executing: %s", err.Error())
@@ -234,7 +234,7 @@ func TestCommand_Select(t *testing.T) {
 		t.Fatalf("Unexpected error while parsing")
 		return
 	}
-	context := ExecutionContext{backend.NewSequentialMultiBackend(fakeBackend), fakeApi, 3}
+	context := ExecutionContext{backend.NewSequentialMultiBackend(fakeBackend), fakeApi, 3, 0}
 	_, err = command.Execute(context)
 	if err != nil {
 		t.Fatalf("expected success with limit 3 but got err = %s", err.Error())

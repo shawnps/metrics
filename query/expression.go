@@ -68,6 +68,7 @@ type EvaluationContext struct {
 	SampleMethod api.SampleMethod // SampleMethod to use when up/downsampling to match the requested resolution
 	Predicate    api.Predicate    // Predicate to apply to TagSets prior to fetching
 	FetchLimit   fetchCounter     // A limit on the number of fetches which may be performed
+	Done         chan struct{}    // Broadcast for timeout.
 }
 
 // fetchCounter is used to count the number of fetches remaining in a thread-safe manner.
