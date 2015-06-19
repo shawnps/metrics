@@ -16,8 +16,10 @@ package query
 
 import (
 	"sort"
+	"time"
 
 	"github.com/square/metrics/api"
+	"github.com/square/metrics/inspect"
 )
 
 // ExecutionContext is the context supplied when invoking a command.
@@ -25,6 +27,7 @@ type ExecutionContext struct {
 	Backend    api.MultiBackend // the backend
 	API        api.API          // the api
 	FetchLimit int              // the maximum number of fetches
+	Metric     inspect.Metric   // Metric Collection
 }
 
 // Command is the final result of the parsing.
@@ -34,6 +37,27 @@ type Command interface {
 	// Execute the given command. Returns JSON-encodable result or an error.
 	Execute(ExecutionContext) (interface{}, error)
 	Name() string
+}
+
+// wrappedCommand provides a wrapped common logic around a given command.
+type wrappedCommand struct {
+	wrapped Command
+}
+
+func (cmd wrappedCommand) Name() string {
+	return cmd.wrapped.Name() // delegate
+}
+
+func (cmd wrappedCommand) Execute(context ExecutionContext) (interface{}, error) {
+	start := time.Now()
+	result, err := cmd.wrapped.Execute(context) // delegate
+	errored := err != nil
+	if context.Metric != nil {
+		// TODO - set an no-op metric instead of doing if statement everywhere.
+		// this is only here for the testing.
+		context.Metric.RecordQueryLatency(cmd.Name(), errored, time.Now().Sub(start))
+	}
+	return result, err
 }
 
 // DescribeCommand describes the tag set managed by the given metric indexer.
@@ -105,12 +129,13 @@ func (cmd *SelectCommand) Execute(context ExecutionContext) (interface{}, error)
 		return nil, err
 	}
 	return evaluateExpressions(EvaluationContext{
-		MultiBackend: context.Backend,
-		Timerange:    timerange,
-		SampleMethod: cmd.context.SampleMethod,
-		Predicate:    cmd.predicate,
 		API:          context.API,
 		FetchLimit:   NewFetchCounter(context.FetchLimit),
+		Metric:       context.Metric,
+		MultiBackend: context.Backend,
+		Predicate:    cmd.predicate,
+		SampleMethod: cmd.context.SampleMethod,
+		Timerange:    timerange,
 	}, cmd.expressions)
 }
 

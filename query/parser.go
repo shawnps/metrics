@@ -228,10 +228,14 @@ func (p *Parser) makeDescribe() {
 		p.flagTypeAssertion()
 		return
 	}
-	p.command = &DescribeCommand{
+	p.setCommand(&DescribeCommand{
 		metricName: api.MetricKey(stringLiteral.literal),
 		predicate:  predicateNode,
-	}
+	})
+}
+
+func (p *Parser) setCommand(command Command) {
+	p.command = wrappedCommand{command}
 }
 
 func (p *Parser) makeSelect() {
@@ -250,15 +254,15 @@ func (p *Parser) makeSelect() {
 		p.flagTypeAssertion()
 		return
 	}
-	p.command = &SelectCommand{
+	p.setCommand(&SelectCommand{
 		predicate:   predicateNode,
 		expressions: expressionList.expressions,
 		context:     contextNode,
-	}
+	})
 }
 
 func (p *Parser) makeDescribeAll() {
-	p.command = &DescribeAllCommand{}
+	p.setCommand(&DescribeAllCommand{})
 }
 
 func (p *Parser) makeDescribeMetrics() {
@@ -274,7 +278,7 @@ func (p *Parser) makeDescribeMetrics() {
 		p.flagTypeAssertion()
 		return
 	}
-	p.command = &DescribeMetricsCommand{tagKey: tagLiteral.tag, tagValue: stringLiteral.literal}
+	p.setCommand(&DescribeMetricsCommand{tagKey: tagLiteral.tag, tagValue: stringLiteral.literal})
 }
 
 func (p *Parser) addOperatorLiteral(operator string) {
