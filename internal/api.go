@@ -31,6 +31,7 @@ func NewAPI(config api.Config) (api.API, error) {
 	clusterConfig := gocql.NewCluster()
 	clusterConfig.Hosts = config.Hosts
 	clusterConfig.Keyspace = config.Keyspace
+	clusterConfig.NumConns = 8
 	db, err := NewCassandraDatabase(clusterConfig)
 	if err != nil {
 		return nil, err
