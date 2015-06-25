@@ -20,6 +20,11 @@ import (
 )
 
 // Profiler contains a sequence of profiles which are collected over the course of a query execution.
+// Suggested Usage:
+//
+//	func ExampleFunction(p *Profiler, ...) {
+//		p.Profile.Record("operation")()
+//	}
 type Profiler struct {
 	now      func() time.Time
 	mutex    *sync.Mutex
