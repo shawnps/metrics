@@ -16,6 +16,7 @@ package api
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/square/metrics/inspect"
@@ -26,6 +27,45 @@ import (
 type Cancellable interface {
 	Done() chan struct{}         // returns a channel that is closed when the work is done.
 	Deadline() (time.Time, bool) // deadline for the request.
+}
+
+type Cache struct {
+	lock     sync.RWMutex
+	elements map[serializedKey]Timeseries
+}
+
+type CacheKey struct {
+	Metric       TaggedMetric
+	Timerange    Timerange
+	SampleMethod SampleMethod
+}
+
+type serializedKey struct {
+	MetricKey      MetricKey
+	SerializedTags string
+	Timerange      Timerange
+	SampleMethod   SampleMethod
+}
+
+func (c Cache) GetOrCompute(key CacheKey, function func() Timeseries) Timeseries {
+	serialized := serializedKey{
+		MetricKey:      key.Metric.MetricKey,
+		SerializedTags: key.Metric.TagSet.Serialize(),
+		SampleMethod:   key.SampleMethod,
+		Timerange:      key.Timerange,
+	}
+	c.lock.RLock()
+	if value, ok := c.elements[serialized]; ok {
+		c.lock.RUnlock()
+		return value
+	}
+	c.lock.RUnlock()
+
+	computed := function()
+	c.lock.Lock()
+	c.elements[serialized] = computed
+	c.lock.Unlock()
+	return computed
 }
 
 type DefaultCancellable struct {
@@ -55,32 +95,31 @@ func NewCancellable() Cancellable {
 
 // FetchSeriesRequest contains all the information to fetch a single series of metric
 // from a backend.
-type FetchSeriesRequest struct {
-	Metric       TaggedMetric // metric to fetch.
+type CommonBackendRequest struct {
+	// fields
 	SampleMethod SampleMethod // up/downsampling behavior.
 	Timerange    Timerange    // time range to fetch data from.
-	API          API          // an API instance.
-	Cancellable  Cancellable
-	Profiler     *inspect.Profiler
+
+	// the query environment
+	API         API
+	Cancellable Cancellable
+	Profiler    *inspect.Profiler
+}
+
+type FetchSeriesRequest struct {
+	Metric TaggedMetric
+	CommonBackendRequest
 }
 
 type FetchMultipleRequest struct {
-	Metrics      []TaggedMetric
-	SampleMethod SampleMethod
-	Timerange    Timerange
-	API          API
-	Cancellable  Cancellable
-	Profiler     *inspect.Profiler
+	Metrics []TaggedMetric
+	CommonBackendRequest
 }
 
 func (r FetchMultipleRequest) ToSingle(metric TaggedMetric) FetchSeriesRequest {
 	return FetchSeriesRequest{
-		Metric:       metric,
-		API:          r.API,
-		Cancellable:  r.Cancellable,
-		SampleMethod: r.SampleMethod,
-		Timerange:    r.Timerange,
-		Profiler:     r.Profiler,
+		Metric:               metric,
+		CommonBackendRequest: r.CommonBackendRequest,
 	}
 }
 

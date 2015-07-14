@@ -71,11 +71,13 @@ func (expr *metricFetchExpression) Evaluate(context function.EvaluationContext) 
 	serieslist, err := context.MultiBackend.FetchMultipleSeries(
 		api.FetchMultipleRequest{
 			metrics,
-			context.SampleMethod,
-			context.Timerange,
-			context.API,
-			context.Cancellable,
-			context.Profiler,
+			api.CommonBackendRequest{
+				context.SampleMethod,
+				context.Timerange,
+				context.API,
+				context.Cancellable,
+				context.Profiler,
+			},
 		},
 	)
 
