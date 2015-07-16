@@ -87,7 +87,7 @@ func FilterRecentBy(list api.SeriesList, count int, summary func([]float64) floa
 	array := newFilterList(len(list.Series), lowest)
 
 	// The number of elements to include
-	elements := int(int64(duration/time.Millisecond) / list.Timerange.Resolution())
+	elements := int(int64(duration/time.Millisecond) / list.Timerange.ResolutionMillis())
 	if elements < 1 {
 		elements = 1
 	}

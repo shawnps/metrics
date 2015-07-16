@@ -68,7 +68,7 @@ var MovingAverage = function.MetricFunction{
 		if err != nil {
 			return nil, err
 		}
-		limit := int(float64(size/time.Millisecond)/float64(context.Timerange.Resolution()) + 0.5) // Limit is the number of items to include in the average
+		limit := int(float64(size/time.Millisecond)/float64(context.Timerange.ResolutionMillis()) + 0.5) // Limit is the number of items to include in the average
 		if limit < 1 {
 			// At least one value must be included at all times
 			limit = 1
@@ -76,7 +76,7 @@ var MovingAverage = function.MetricFunction{
 
 		newContext := context
 		timerange := context.Timerange
-		newContext.Timerange, err = api.NewSnappedTimerange(timerange.Start()-int64(limit-1)*timerange.Resolution(), timerange.End(), timerange.Resolution())
+		newContext.Timerange, err = api.NewSnappedTimerange(timerange.Start()-int64(limit-1)*timerange.ResolutionMillis(), timerange.End(), timerange.ResolutionMillis())
 		if err != nil {
 			return nil, err
 		}

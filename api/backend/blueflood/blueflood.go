@@ -131,7 +131,7 @@ func (b *blueflood) FetchSingleSeries(request api.FetchSeriesRequest) (api.Times
 		return api.Timeseries{}, fmt.Errorf("unsupported SampleMethod %s", request.SampleMethod.String())
 	}
 	queryResolution := b.config.bluefloodResolution(
-		(time.Millisecond * time.Duration(request.Timerange.Resolution())),
+		(time.Millisecond * time.Duration(request.Timerange.ResolutionMillis())),
 		request.Timerange.Start())
 
 	queryUrl, err := b.constructURL(request, sampler, queryResolution)
@@ -175,7 +175,7 @@ func (b *blueflood) constructURL(request api.FetchSeriesRequest,
 	params.Set("from", strconv.FormatInt(request.Timerange.Start(), 10))
 	// Pull a bit outside of the requested range from blueflood so we
 	// have enough data to generate all snapped values
-	params.Set("to", strconv.FormatInt(request.Timerange.End()+request.Timerange.Resolution(), 10))
+	params.Set("to", strconv.FormatInt(request.Timerange.End()+request.Timerange.ResolutionMillis(), 10))
 	params.Set("resolution", queryResolution.bluefloodEnum)
 	params.Set("select", fmt.Sprintf("numPoints,%s", strings.ToLower(sampler.fieldName)))
 	result.RawQuery = params.Encode()
@@ -249,7 +249,7 @@ func addMetricPoint(metricPoint metricPoint, field func(metricPoint) float64, ti
 	value := field(metricPoint)
 	// The index to assign within the array is computed using the timestamp.
 	// It floors to the nearest index.
-	index := (metricPoint.Timestamp - timerange.Start()) / timerange.Resolution()
+	index := (metricPoint.Timestamp - timerange.Start()) / timerange.ResolutionMillis()
 	if index < 0 || index >= int64(timerange.Slots()) {
 		return false
 	}

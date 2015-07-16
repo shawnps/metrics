@@ -175,7 +175,7 @@ func (tr Timerange) MarshalJSON() ([]byte, error) {
 }
 
 // Resolution() returns the .resolution field
-func (tr Timerange) Resolution() int64 {
+func (tr Timerange) ResolutionMillis() int64 {
 	return tr.resolution
 }
 
