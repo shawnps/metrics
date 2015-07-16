@@ -241,7 +241,7 @@ func processResult(parsedResult queryResponse,
 		values[i] = sampler.bucketSampler(bucket)
 	}
 
-	// interpolate.
+	// interpolate!
 	return values
 }
 
