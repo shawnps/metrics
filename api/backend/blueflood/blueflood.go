@@ -131,7 +131,7 @@ func (b *blueflood) FetchSingleSeries(request api.FetchSeriesRequest) (api.Times
 		return api.Timeseries{}, fmt.Errorf("unsupported SampleMethod %s", request.SampleMethod.String())
 	}
 	queryResolution := b.config.bluefloodResolution(
-		(time.Millisecond * time.Duration(request.Timerange.ResolutionMillis())),
+		time.Duration(request.Timerange.Resolution()),
 		request.Timerange.Start())
 
 	queryUrl, err := b.constructURL(request, sampler, queryResolution)

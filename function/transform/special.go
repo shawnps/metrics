@@ -17,7 +17,6 @@ package transform
 import (
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/square/metrics/api"
 	"github.com/square/metrics/function"
@@ -68,7 +67,7 @@ var MovingAverage = function.MetricFunction{
 		if err != nil {
 			return nil, err
 		}
-		limit := int(float64(size/time.Millisecond)/float64(context.Timerange.ResolutionMillis()) + 0.5) // Limit is the number of items to include in the average
+		limit := int(float64(size)/float64(context.Timerange.Resolution()) + 0.5) // Limit is the number of items to include in the average
 		if limit < 1 {
 			// At least one value must be included at all times
 			limit = 1
