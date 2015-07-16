@@ -66,14 +66,13 @@ module.directive("googleChart", function($chartWaiting, $timeout, $windowSize) {
 
       function render() {
         $timeout(function(){
-          // TODO - add this somewhere.
-          google.visualization.events.addListener(chart, "ready", function() {
-            scope.$apply(function() { $chartWaiting.dec(); });
-          });
           var data = scope.data();
           var option = scope.option();
           if (data && option) {
             $chartWaiting.inc();
+            google.visualization.events.addListener(chart, "ready", function() {
+              scope.$apply(function() { $chartWaiting.dec(); });
+            });
             chart.draw(data, option);
           }
         }, 1);
@@ -90,7 +89,6 @@ module.run(function($window, $timeout, $windowSize) {
     var currentCounter = counter; // capture the current value via the closure.
     $timeout(function() {
       if (currentCounter  == counter) {
-        // console.log('new size:', $window.innerWidth, $window.innerHeight);
         $windowSize.height = $window.innerHeight;
         $windowSize.width = $window.innerWidth;
         $windowSize.version++;
@@ -359,7 +357,6 @@ module.controller("embedCtrl", function(
   var at = url.indexOf("?");
   $scope.metricsURL = $location.protocol() + "://" + $location.host() + ":" + $location.port()
     + "/ui" + url.substring(at);
-  debugger;
 });
 
 // utility functions
