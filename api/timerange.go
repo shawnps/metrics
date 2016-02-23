@@ -41,8 +41,8 @@ func (tr Timerange) Start() int64 {
 }
 
 func (tr Timerange) StartTime() time.Time {
-	seconds := tr.Start() / 1000
-	milliseconds := tr.Start() % 1000
+	seconds := tr.start / 1000
+	milliseconds := tr.start % 1000
 	nanoseconds := milliseconds * 1000000
 	return time.Unix(seconds, nanoseconds)
 }
@@ -53,8 +53,8 @@ func (tr Timerange) End() int64 {
 }
 
 func (tr Timerange) EndTime() time.Time {
-	seconds := tr.End() / 1000
-	milliseconds := tr.Start() % 1000
+	seconds := tr.end / 1000
+	milliseconds := tr.end % 1000
 	nanoseconds := milliseconds * 1000000
 	return time.Unix(seconds, nanoseconds)
 }
